@@ -22,11 +22,6 @@ struct Lexer {
 };
 
 void lexer_init(struct Lexer *lexer) {
-	struct LexerToken *token = (struct LexerToken *)malloc(sizeof(struct LexerToken));
-	token->next = NULL;
-	token->value = (char *)malloc(sizeof(char) * LEXER_TOKEN_VALUE_LENGTH);
-	lexer->f_token = token;
-	lexer->c_token = token;
 }
 
 void lexer_push(struct Lexer *lexer, char c) {
@@ -36,7 +31,13 @@ void lexer_push(struct Lexer *lexer, char c) {
 		} else if (c == '\'') {
 			lexer->mode = comment;
 			return;
+		} else if (c == '\n' || c == ';') {
+			lexer->newtoken(lexer);
+			strcpy(lexer->c_token->value, ";");
+			lexer->mode = skip;
+			return;
 		} else {
+			lexer->newtoken(lexer);
 			lexer->mode = token;
 		}
 	}
@@ -47,13 +48,9 @@ void lexer_push(struct Lexer *lexer, char c) {
 		} else if (c == '(' || c == ')' || c == ' ' || c == '	') {
 			lexer->newtoken(lexer);
 			lexer->mode = skip;
-			return;
 		} else if (c == '\n' || c == ';') {
-			if (strlen(lexer->c_token->value) > 0) {
-				lexer->newtoken(lexer);
-			}
-			strcpy(lexer->c_token->value, ";");
 			lexer->newtoken(lexer);
+			strcpy(lexer->c_token->value, ";");
 			lexer->mode = skip;
 			return;
 		}
@@ -75,7 +72,11 @@ void lexer_newtoken(struct Lexer *lexer) {
 	struct LexerToken *token = (struct LexerToken *)malloc(sizeof(struct LexerToken));
 	token->next = NULL;
 	token->value = (char *)malloc(sizeof(char) * LEXER_TOKEN_VALUE_LENGTH);
-	lexer->c_token->next = token;
+	if (lexer->f_token == NULL) {
+		lexer->f_token = token;
+	} else {
+		lexer->c_token->next = token;
+	}
 	lexer->c_token = token;
 }
 
